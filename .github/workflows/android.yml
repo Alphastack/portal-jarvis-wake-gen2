@@ -16,6 +16,8 @@ jobs:
           java-version: "17"
           cache: gradle
       - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
       - run: ./gradlew --no-daemon test lint assembleDebug assembleRelease
       - name: Verify packaged Portal ABIs
         run: |
