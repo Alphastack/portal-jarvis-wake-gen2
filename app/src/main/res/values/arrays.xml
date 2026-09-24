@@ -1,0 +1,5 @@
+<resources>
+    <string-array name="sensitivity_presets">
+        <item>Strict</item><item>Balanced</item><item>Relaxed</item>
+    </string-array>
+</resources>

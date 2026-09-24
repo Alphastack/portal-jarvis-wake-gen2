@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.INTERNET"/>
+    <queries><package android:name="com.portal.assistant"/></queries>
     <application android:allowBackup="false" android:label="Portal Jarvis Wake Gen2" android:theme="@style/AppTheme" android:usesCleartextTraffic="false">
         <activity android:name=".SettingsActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
         <service android:name=".WakeService" android:foregroundServiceType="microphone" android:exported="false"/>
