@@ -4,7 +4,7 @@ import com.german.portaljarviswake.core.SafeZipExtractor
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.net.HttpsURLConnection
+import javax.net.ssl.HttpsURLConnection
 import java.net.URL
 
 class ModelInstaller(private val root: File) {

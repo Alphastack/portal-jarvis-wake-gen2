@@ -33,11 +33,33 @@ class RegressionTest {
         target.deleteRecursively()
     }
 
-    @Test fun `state machine waits for assistant disappearance before cooldown`() {
+    @Test fun `state machine waits for confirmed assistant disappearance before cooldown`() {
         val machine = WakeStateMachine()
         machine.on(WakeEvent.Start)
         assertTrue(machine.on(WakeEvent.Phrase).contains(WakeEffect.ReleaseMic))
-        assertTrue(machine.on(WakeEvent.AssistantRecorderSeen).contains(WakeEffect.AssistantActive))
+
+        val assistantSeen = machine.on(WakeEvent.AssistantRecorderSeen)
+        assertTrue(assistantSeen.contains(WakeEffect.AssistantActive))
+        assertFalse(assistantSeen.contains(WakeEffect.ScheduleAbsentCheck))
+        assertTrue(machine.state == WakeState.ASSISTANT_ACTIVE)
+
+        val repeatedSeen = machine.on(WakeEvent.AssistantRecorderSeen)
+        assertFalse(repeatedSeen.contains(WakeEffect.ScheduleAbsentCheck))
+        assertTrue(machine.state == WakeState.ASSISTANT_ACTIVE)
+
         assertTrue(machine.on(WakeEvent.AssistantAbsentFiveSeconds).contains(WakeEffect.Cooldown))
+        assertTrue(machine.state == WakeState.COOLDOWN)
+    }
+
+    @Test fun `screen events do not interrupt an assistant turn`() {
+        val machine = WakeStateMachine()
+        machine.on(WakeEvent.Start)
+        machine.on(WakeEvent.Phrase)
+        machine.on(WakeEvent.AssistantRecorderSeen)
+
+        assertTrue(machine.on(WakeEvent.ScreenOff).isEmpty())
+        assertTrue(machine.state == WakeState.ASSISTANT_ACTIVE)
+        assertTrue(machine.on(WakeEvent.ScreenOn).isEmpty())
+        assertTrue(machine.state == WakeState.ASSISTANT_ACTIVE)
     }
 }

@@ -1,0 +1,61 @@
+name: Release APK
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: android-actions/setup-android@v3
+
+      - name: Test, lint, and build
+        run: ./gradlew --no-daemon test lint assembleRelease
+
+      - name: Prepare release package
+        run: |
+          mkdir -p dist/bundle
+          cp app/build/outputs/apk/release/app-release.apk dist/portal-jarvis-wake-gen2.apk
+          cp dist/portal-jarvis-wake-gen2.apk dist/bundle/
+          cp install.sh install.ps1 install.bat README.md LICENSE SECURITY.md CONTRIBUTING.md dist/bundle/
+          chmod +x dist/install.sh dist/bundle/install.sh 2>/dev/null || true
+          cp install.sh install.ps1 install.bat dist/
+          (
+            cd dist
+            sha256sum portal-jarvis-wake-gen2.apk > SHA256SUMS
+            zip -r portal-jarvis-wake-gen2-release.zip bundle
+          )
+
+      - name: Verify packaged Portal ABIs
+        run: |
+          unzip -l dist/portal-jarvis-wake-gen2.apk | tee /tmp/apk-files.txt
+          grep -q 'lib/arm64-v8a/' /tmp/apk-files.txt
+          grep -q 'lib/armeabi-v7a/' /tmp/apk-files.txt
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: portal-jarvis-wake-gen2-release
+          path: dist/
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/portal-jarvis-wake-gen2.apk
+            dist/portal-jarvis-wake-gen2-release.zip
+            dist/install.sh
+            dist/install.ps1
+            dist/install.bat
+            dist/SHA256SUMS

@@ -20,7 +20,10 @@ class SettingsActivity : AppCompatActivity() {
         fun save() { val normalized = Phrase.normalize(phrase.text.toString()); if (!Phrase.isValid(normalized)) { phrase.error = "Use at least two words"; return }; prefs.edit().putBoolean("enabled", enabled.isChecked).putString("phrase", normalized).putBoolean("screenOff", off.isChecked).putBoolean("boot", boot.isChecked).putString("sensitivity", listOf("STRICT", "BALANCED", "RELAXED")[sensitivity.selectedItemPosition]).apply(); if (enabled.isChecked && hasMic()) startWake() else stopService(Intent(this, WakeService::class.java)); updateStatus() }
         enabled.setOnCheckedChangeListener { _, _ -> save() }; off.setOnCheckedChangeListener { _, _ -> save() }; boot.setOnCheckedChangeListener { _, _ -> save() }; phrase.setOnFocusChangeListener { _, focused -> if (!focused) save() }
         findViewById<Button>(R.id.retry).setOnClickListener { if (!ModelInstaller(filesDir).installed()) startWake() else Toast.makeText(this, "A valid model is already installed", Toast.LENGTH_SHORT).show() }
-        findViewById<Button>(R.id.test).setOnClickListener { WakeService.handoff(this); Toast.makeText(this, "Test handoff requested", Toast.LENGTH_SHORT).show() }
+        findViewById<Button>(R.id.test).setOnClickListener {
+            WakeService.testHandoff(this)
+            Toast.makeText(this, "Test handoff requested", Toast.LENGTH_SHORT).show()
+        }
         if (!hasMic()) requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 7)
         if (!Settings.canDrawOverlays(this)) Toast.makeText(this, "Overlay permission is optional but may improve Portal launch reliability", Toast.LENGTH_LONG).show()
     }
@@ -28,6 +31,9 @@ class SettingsActivity : AppCompatActivity() {
     override fun onPause() { unregisterReceiver(statusReceiver); super.onPause() }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, results: IntArray) { super.onRequestPermissionsResult(requestCode, permissions, results); if (requestCode == 7 && results.firstOrNull() == PackageManager.PERMISSION_GRANTED && prefs.getBoolean("enabled", false)) startWake(); updateStatus() }
     private fun hasMic() = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-    private fun startWake() = ContextCompat.startForegroundService(this, Intent(this, WakeService::class.java))
+    private fun startWake() = ContextCompat.startForegroundService(
+        this,
+        Intent(this, WakeService::class.java).setAction(WakeService.ACTION_RELOAD),
+    )
     private fun updateStatus() { val state = prefs.getString("status", if (prefs.getBoolean("enabled", false)) "Starting" else "Disabled"); status.text = "Status: $state\n${prefs.getString("statusDetail", "")}" }
 }

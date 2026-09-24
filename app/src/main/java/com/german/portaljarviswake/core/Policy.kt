@@ -29,18 +29,102 @@ enum class WakeState { IDLE, MODEL_MISSING, SCREEN_PAUSED, LISTENING, YIELDING, 
 enum class WakeEvent { Start, Phrase, AssistantRecorderSeen, AssistantAbsentFiveSeconds, AcquireTimeout, SafetyTimeout, CooldownFinished, ScreenOff, ScreenOn, Stop, MicFailure }
 enum class WakeEffect { StartListening, ReleaseMic, LaunchAssistant, AssistantActive, Cooldown, ScheduleAcquireTimeout, ScheduleSafetyTimeout, ScheduleCooldown, ScheduleAbsentCheck, Publish }
 class WakeStateMachine(initial: WakeState = WakeState.IDLE) {
-    var state: WakeState = initial; private set
+    var state: WakeState = initial
+        private set
+
     fun on(event: WakeEvent): Set<WakeEffect> = when (event) {
-        WakeEvent.Start, WakeEvent.ScreenOn, WakeEvent.CooldownFinished -> transition(WakeState.LISTENING, WakeEffect.StartListening, WakeEffect.Publish)
-        WakeEvent.Phrase -> if (state == WakeState.LISTENING) transition(WakeState.YIELDING, WakeEffect.ReleaseMic, WakeEffect.LaunchAssistant, WakeEffect.ScheduleAcquireTimeout, WakeEffect.ScheduleSafetyTimeout, WakeEffect.Publish) else emptySet()
-        WakeEvent.AssistantRecorderSeen -> if (state == WakeState.YIELDING || state == WakeState.ASSISTANT_ACTIVE) transition(WakeState.ASSISTANT_ACTIVE, WakeEffect.AssistantActive, WakeEffect.ScheduleAbsentCheck, WakeEffect.Publish) else emptySet()
-        WakeEvent.AssistantAbsentFiveSeconds -> if (state == WakeState.ASSISTANT_ACTIVE) transition(WakeState.COOLDOWN, WakeEffect.Cooldown, WakeEffect.ScheduleCooldown, WakeEffect.Publish) else emptySet()
-        WakeEvent.AcquireTimeout, WakeEvent.SafetyTimeout -> if (state == WakeState.YIELDING || state == WakeState.ASSISTANT_ACTIVE) transition(WakeState.COOLDOWN, WakeEffect.Cooldown, WakeEffect.ScheduleCooldown, WakeEffect.Publish) else emptySet()
-        WakeEvent.ScreenOff -> transition(WakeState.SCREEN_PAUSED, WakeEffect.ReleaseMic, WakeEffect.Publish)
+        WakeEvent.Start -> when (state) {
+            WakeState.IDLE, WakeState.MODEL_MISSING, WakeState.MIC_UNAVAILABLE ->
+                transition(WakeState.LISTENING, WakeEffect.StartListening, WakeEffect.Publish)
+            else -> emptySet()
+        }
+
+        WakeEvent.ScreenOn -> if (state == WakeState.SCREEN_PAUSED) {
+            transition(WakeState.LISTENING, WakeEffect.StartListening, WakeEffect.Publish)
+        } else {
+            emptySet()
+        }
+
+        WakeEvent.CooldownFinished -> if (state == WakeState.COOLDOWN) {
+            transition(WakeState.LISTENING, WakeEffect.StartListening, WakeEffect.Publish)
+        } else {
+            emptySet()
+        }
+
+        WakeEvent.Phrase -> if (state == WakeState.LISTENING) {
+            transition(
+                WakeState.YIELDING,
+                WakeEffect.ReleaseMic,
+                WakeEffect.LaunchAssistant,
+                WakeEffect.ScheduleAcquireTimeout,
+                WakeEffect.ScheduleSafetyTimeout,
+                WakeEffect.Publish,
+            )
+        } else {
+            emptySet()
+        }
+
+        WakeEvent.AssistantRecorderSeen -> if (
+            state == WakeState.YIELDING || state == WakeState.ASSISTANT_ACTIVE
+        ) {
+            transition(WakeState.ASSISTANT_ACTIVE, WakeEffect.AssistantActive, WakeEffect.Publish)
+        } else {
+            emptySet()
+        }
+
+        WakeEvent.AssistantAbsentFiveSeconds -> if (state == WakeState.ASSISTANT_ACTIVE) {
+            transition(
+                WakeState.COOLDOWN,
+                WakeEffect.Cooldown,
+                WakeEffect.ScheduleCooldown,
+                WakeEffect.Publish,
+            )
+        } else {
+            emptySet()
+        }
+
+        WakeEvent.AcquireTimeout -> if (state == WakeState.YIELDING) {
+            transition(
+                WakeState.COOLDOWN,
+                WakeEffect.Cooldown,
+                WakeEffect.ScheduleCooldown,
+                WakeEffect.Publish,
+            )
+        } else {
+            emptySet()
+        }
+
+        WakeEvent.SafetyTimeout -> if (
+            state == WakeState.YIELDING || state == WakeState.ASSISTANT_ACTIVE
+        ) {
+            transition(
+                WakeState.COOLDOWN,
+                WakeEffect.Cooldown,
+                WakeEffect.ScheduleCooldown,
+                WakeEffect.Publish,
+            )
+        } else {
+            emptySet()
+        }
+
+        WakeEvent.ScreenOff -> if (state == WakeState.LISTENING) {
+            transition(WakeState.SCREEN_PAUSED, WakeEffect.ReleaseMic, WakeEffect.Publish)
+        } else {
+            emptySet()
+        }
+
         WakeEvent.Stop -> transition(WakeState.IDLE, WakeEffect.ReleaseMic, WakeEffect.Publish)
-        WakeEvent.MicFailure -> transition(WakeState.MIC_UNAVAILABLE, WakeEffect.ReleaseMic, WakeEffect.Publish)
+        WakeEvent.MicFailure -> transition(
+            WakeState.MIC_UNAVAILABLE,
+            WakeEffect.ReleaseMic,
+            WakeEffect.Publish,
+        )
     }
-    private fun transition(next: WakeState, vararg effects: WakeEffect): Set<WakeEffect> { state = next; return effects.toSet() }
+
+    private fun transition(next: WakeState, vararg effects: WakeEffect): Set<WakeEffect> {
+        state = next
+        return effects.toSet()
+    }
 }
 object Backoff { fun delay(attempt: Int) = (500L shl attempt.coerceAtMost(5)).coerceAtMost(10_000L) }
 enum class HandoffState { LISTENING, YIELDING, ASSISTANT_ACTIVE, COOLDOWN }
