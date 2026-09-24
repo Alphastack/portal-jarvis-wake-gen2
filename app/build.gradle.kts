@@ -35,6 +35,9 @@ android {
     lint {
         abortOnError = true
         checkReleaseBuilds = true
+        // API 29 is deliberate: Portal's Android 10 microphone/background behavior is
+        // the compatibility target, and this APK is sideloaded rather than Play-published.
+        disable += "ExpiredTargetSdkVersion"
     }
 }
 dependencies {
