@@ -8,6 +8,6 @@
     <application android:allowBackup="false" android:label="Portal Jarvis Wake Gen2" android:theme="@style/AppTheme" android:usesCleartextTraffic="false">
         <activity android:name=".SettingsActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
         <service android:name=".WakeService" android:foregroundServiceType="microphone" android:exported="false"/>
-        <receiver android:name=".BootReceiver" android:exported="false"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/><action android:name="android.intent.action.MY_PACKAGE_REPLACED"/></intent-filter></receiver>
+        <receiver android:name=".BootReceiver" android:exported="true"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/><action android:name="android.intent.action.MY_PACKAGE_REPLACED"/></intent-filter></receiver>
     </application>
 </manifest>

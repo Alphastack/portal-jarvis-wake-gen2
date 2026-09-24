@@ -1,21 +1,35 @@
 package com.german.portaljarviswake
 
-import com.german.portaljarviswake.core.SafeZip
-import java.io.*
+import com.german.portaljarviswake.core.SafeZipExtractor
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.net.HttpsURLConnection
 import java.net.URL
-import java.util.zip.ZipInputStream
 
-/** Downloads only from Vosk's HTTPS model host and installs atomically from a staging directory. */
 class ModelInstaller(private val root: File) {
     val model = File(root, "vosk-small-en-us")
     fun installed() = File(model, "am").isDirectory
-    fun install(progress: (Int)->Unit) {
+    fun install(progress: (Int) -> Unit) {
         if (installed()) return
-        val zip=File(root,"model.zip.part"); val staging=File(root,"model.staging-${System.currentTimeMillis()}")
-        root.mkdirs(); staging.mkdirs()
-        try { val c=URL(MODEL_URL).openConnection() as HttpsURLConnection; c.connectTimeout=15_000; c.readTimeout=30_000; c.inputStream.use { input -> FileOutputStream(zip).use { out -> val b=ByteArray(8192); var n:Int; var total=0L; val size=c.contentLengthLong; while(input.read(b).also{n=it}>=0){out.write(b,0,n);total+=n;if(size>0)progress((total*100/size).toInt())} } }; unzip(zip, staging); val extracted=staging.listFiles()?.firstOrNull { File(it,"am").isDirectory } ?: throw IOException("Model archive has no model directory"); if(model.exists()) model.deleteRecursively(); if(!extracted.renameTo(model)) throw IOException("Cannot finalize model"); progress(100) } finally { zip.delete(); staging.deleteRecursively() }
+        root.mkdirs(); root.listFiles { f -> f.name.startsWith("model.staging-") }?.forEach { it.deleteRecursively() }
+        val archive = File(root, "model.zip.part"); val staging = File(root, "model.staging-${System.currentTimeMillis()}")
+        try {
+            val connection = URL(MODEL_URL).openConnection() as HttpsURLConnection
+            connection.connectTimeout = 15_000; connection.readTimeout = 30_000; connection.connect()
+            if (connection.responseCode !in 200..299) throw IOException("model server returned HTTP ${connection.responseCode}")
+            try { connection.inputStream.use { input -> FileOutputStream(archive).use { output ->
+                val buffer = ByteArray(8192); var total = 0L; var count: Int; val length = connection.contentLengthLong
+                while (input.read(buffer).also { count = it } > 0) { total += count; if (total > MAX_ARCHIVE_BYTES) throw IOException("model archive exceeds limit"); output.write(buffer, 0, count); if (length > 0) progress((total * 100 / length).toInt().coerceAtMost(99)) }
+            } } } finally { connection.disconnect() }
+            val result = archive.inputStream().use { SafeZipExtractor.extract(it, staging, MAX_EXTRACTED_BYTES, MAX_ENTRIES) }
+            if (!result.success) throw IOException("unsafe model archive: ${result.error}")
+            val candidate = staging.listFiles()?.firstOrNull { File(it, "am").isDirectory } ?: throw IOException("model archive has no model directory")
+            val backup = File(root, "model.previous"); if (backup.exists()) backup.deleteRecursively()
+            if (model.exists() && !model.renameTo(backup)) throw IOException("cannot preserve existing model")
+            if (!candidate.renameTo(model)) { backup.renameTo(model); throw IOException("cannot promote validated model") }
+            backup.deleteRecursively(); progress(100)
+        } finally { archive.delete(); staging.deleteRecursively() }
     }
-    private fun unzip(zip:File, to:File) { ZipInputStream(FileInputStream(zip)).use { z -> var e=z.nextEntry; while(e!=null){ if(!SafeZip.isSafe(e.name)) throw IOException("Unsafe archive entry"); val target=File(to,e.name); if(e.isDirectory) target.mkdirs() else { target.parentFile?.mkdirs(); FileOutputStream(target).use { z.copyTo(it) } }; e=z.nextEntry } } }
-    companion object { const val MODEL_URL="https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip" }
+    companion object { const val MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"; const val MAX_ARCHIVE_BYTES = 80L * 1024 * 1024; const val MAX_EXTRACTED_BYTES = 200L * 1024 * 1024; const val MAX_ENTRIES = 10_000 }
 }
