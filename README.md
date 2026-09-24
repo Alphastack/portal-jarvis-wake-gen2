@@ -60,10 +60,9 @@ Ambient microphone PCM is processed in memory and is never uploaded or saved.
 
 ### Release install
 
-After this repository has a GitHub owner, set its slug once:
+Download and install the latest published release:
 
 ```bash
-export PORTAL_JARVIS_REPO=OWNER/portal-jarvis-wake-gen2
 ./install.sh --latest
 ```
 
@@ -89,7 +88,6 @@ The installer:
 Windows PowerShell:
 
 ```powershell
-$env:PORTAL_JARVIS_REPO = "OWNER/portal-jarvis-wake-gen2"
 .\install.ps1 -Mode Latest
 ```
 

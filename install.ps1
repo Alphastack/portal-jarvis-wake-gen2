@@ -2,7 +2,7 @@ param(
     [ValidateSet("Install", "Latest", "Status", "Uninstall")]
     [string]$Mode = "Install",
     [string]$Apk = "",
-    [string]$Repo = $env:PORTAL_JARVIS_REPO
+    [string]$Repo = $(if ($env:PORTAL_JARVIS_REPO) { $env:PORTAL_JARVIS_REPO } else { "Alphastack/portal-jarvis-wake-gen2" })
 )
 
 $ErrorActionPreference = "Stop"

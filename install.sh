@@ -6,7 +6,7 @@ JARVIS="com.portal.assistant"
 ACTIVITY="$PKG/.SettingsActivity"
 SERVICE="$PKG/.WakeService"
 ASSET="portal-jarvis-wake-gen2.apk"
-REPO="${PORTAL_JARVIS_REPO:-}"
+REPO="${PORTAL_JARVIS_REPO:-Alphastack/portal-jarvis-wake-gen2}"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 CACHE_DIR="${XDG_CACHE_HOME:-$SCRIPT_DIR/.cache}/portal-jarvis-wake-gen2"
 ADB_BIN="${ADB:-}"
@@ -21,8 +21,8 @@ Usage:
   ./install.sh --uninstall         remove the helper
   ./install.sh --help
 
-Set PORTAL_JARVIS_REPO=OWNER/portal-jarvis-wake-gen2 for --latest until this
-checkout has an origin remote. ADB is used from PATH first.
+Override PORTAL_JARVIS_REPO only when installing from a fork. ADB is used from
+PATH first.
 EOF
 }
 
