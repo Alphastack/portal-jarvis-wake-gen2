@@ -1,0 +1,3 @@
+param([string]$Apk="app/build/outputs/apk/debug/app-debug.apk")
+$pkg="com.german.portaljarviswake"; $jarvis="com.portal.assistant"; $adb=if($env:ADB){$env:ADB}else{"adb"}
+if(!(Test-Path $Apk)){throw "APK not found: $Apk"}; & $adb install -r $Apk; & $adb shell pm grant $pkg android.permission.RECORD_AUDIO; & $adb shell appops set $pkg SYSTEM_ALERT_WINDOW allow; & $adb shell dumpsys deviceidle whitelist "+$pkg"; & $adb shell pm path $jarvis; & $adb shell am start -n "$pkg/.SettingsActivity"; & $adb shell am start-foreground-service -n "$pkg/.WakeService"; Write-Host "Diagnostics: adb logcat -s PortalJarvisWake"
